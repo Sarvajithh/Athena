@@ -1,4 +1,5 @@
 import { DensityToggle } from '../../components/shared/DensityToggle';
+import { AdaptivePlannerCard } from './AdaptivePlannerCard';
 import { DeepWorkAllocationCard } from './DeepWorkAllocationCard';
 import { HealthStrip } from './HealthStrip';
 import { MissionStrip } from './MissionStrip';
@@ -28,12 +29,15 @@ function formatWindow(start: string, end: string): string {
  * why (§1's governing test). Every section renders from
  * `get_bootstrap_state` — real persisted profile/semester/deadline
  * data — with the verdict itself computed by the deterministic
- * `athena-domain::priority` engine (09_DECISION_ENGINE.md). No mock
- * values anywhere in this tree.
+ * `athena-domain::priority`/`athena-domain::planner` engine
+ * (09_DECISION_ENGINE.md; 08_ADAPTIVE_PLANNER.md). No mock values
+ * anywhere in this tree.
  *
- * Structural hierarchy, top to bottom, matches §2 exactly:
+ * Structural hierarchy, top to bottom, matches §2 exactly, with one
+ * addition below §1 for the Adaptive Planner (08_ADAPTIVE_PLANNER.md):
  *   0. Mission strip            — always shown, real `user_profile` fields
  *   1. Recommended Action       — the dominant verdict card
+ *   1a. Adaptive planner        — log a disruption, see the recompute (new)
  *   2. Weakness Snapshot        — intentionally omitted, see note below
  *   3. Today's Intelligence     — intentionally omitted, see note below
  *   4. Health Strip             — Semester · Career · Masters
@@ -46,14 +50,15 @@ function formatWindow(start: string, end: string): string {
  * (`bottlenecks`, `drift_signals`, `opportunities`,
  * `project_status_snapshots`, `research_activities`) don't exist in
  * this schema, and this change is explicitly scoped not to modify
- * storage. Per §2's own rule — "an empty bottleneck section is not
- * shown as 'no bottlenecks! 🎉' — it simply isn't there" — the correct,
+ * storage beyond `schedule_disruptions` (08_ADAPTIVE_PLANNER.md §5).
+ * Per §2's own rule — "an empty bottleneck section is not shown as
+ * 'no bottlenecks! 🎉' — it simply isn't there" — the correct,
  * spec-faithful render of "always empty" is exactly what a genuinely
  * inactive one would already look like: absent. Nothing here fakes
  * data to fill those three sections.
  */
 export default function Now() {
-  const { state, loading } = useBootstrap();
+  const { state, loading, refresh } = useBootstrap();
   const { navigate } = useNavigation();
 
   if (loading && !state) {
@@ -87,6 +92,15 @@ export default function Now() {
       {state.profile ? <MissionStrip profile={state.profile} /> : null}
 
       <VerdictCard verdict={state.verdict} />
+
+      <AdaptivePlannerCard
+        semesterActive={state.current_semester !== null}
+        availableMinutesTonight={state.available_minutes_tonight}
+        baseWindowMinutes={state.base_window_minutes}
+        todayDisruptions={state.today_disruptions}
+        recentDisruptions={state.recent_disruptions}
+        onLogged={refresh}
+      />
 
       <div className={styles.secondaryRow}>
         <DeepWorkAllocationCard allocation={allocation} />

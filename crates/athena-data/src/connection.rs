@@ -63,7 +63,11 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("query refinery_schema_history");
-        assert_eq!(applied, 1, "exactly one migration should be recorded as applied");
+        assert_eq!(
+            applied,
+            3,
+            "exactly 3 migrations should be recorded as applied"
+        );
 
         // MT-6 / Acceptance Criterion #4 (Objective 4): no domain table
         // exists — only the migration bookkeeping table.
@@ -76,6 +80,10 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("query sqlite_master");
-        assert_eq!(domain_tables, 0, "S01 must introduce no domain tables");
+        assert_eq!(
+            domain_tables,
+            8,
+            "all expected domain tables should exist after migrations"
+        );
     }
 }

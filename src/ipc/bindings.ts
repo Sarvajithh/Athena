@@ -113,6 +113,45 @@ export interface VerdictDto {
   runners_up: RankedCandidateDto[];
 }
 
+// ---------------------------------------------------------------------
+// Adaptive Planner — mirrors crates/athena-app/src/commands/planner.rs
+// and athena_data::repositories::disruption (08_ADAPTIVE_PLANNER.md).
+// ---------------------------------------------------------------------
+
+export type DisruptionType =
+  | "external_interrupt"
+  | "surprise_workload"
+  | "cancelled_class"
+  | "unexpected_opportunity"
+  | "illness"
+  | "early_finish";
+
+export interface DisruptionRow {
+  id: number;
+  semester_id: number;
+  date: string;
+  disruption_type: DisruptionType;
+  duration_minutes: number;
+  affects_deep_work_window: boolean;
+  linked_deadline_id: number | null;
+  note: string | null;
+  logged_at: string;
+  recompute_triggered: boolean;
+  recompute_headline: string | null;
+  recompute_reasoning: string | null;
+}
+
+export interface DisruptionDto {
+  id: number;
+  date: string;
+  disruption_type: DisruptionType;
+  duration_minutes: number;
+  affects_deep_work_window: boolean;
+  linked_deadline_id: number | null;
+  note: string | null;
+  logged_at: string;
+}
+
 export interface BootstrapState {
   has_profile: boolean;
   profile: ProfileRow | null;
@@ -122,11 +161,47 @@ export interface BootstrapState {
   career_deadlines: DeadlineRow[];
   decisions: DecisionRow[];
   verdict: VerdictDto;
+  /** §3.1's `available_minutes_tonight`, after today's logged disruptions. */
+  available_minutes_tonight: number;
+  base_window_minutes: number;
+  today_disruptions: DisruptionRow[];
+  recent_disruptions: DisruptionRow[];
 }
 
-/** The one read command every screen boots from (01_ARCHITECTURE.md §2.1). */
-export async function getBootstrapState(): Promise<BootstrapState> {
-  return invoke<BootstrapState>("get_bootstrap_state");
+/**
+ * The one read command every screen boots from (01_ARCHITECTURE.md §2.1).
+ * `localDate` (`YYYY-MM-DD`, the user's local calendar day) is optional —
+ * omit it to skip today's-disruption lookup (e.g. before onboarding).
+ */
+export async function getBootstrapState(localDate?: string): Promise<BootstrapState> {
+  return invoke<BootstrapState>("get_bootstrap_state", { localDate: localDate ?? null });
+}
+
+export interface LogDisruptionInput {
+  date: string;
+  disruption_type: DisruptionType;
+  duration_minutes: number;
+  affects_deep_work_window: boolean;
+  linked_deadline_id: number | null;
+  note: string | null;
+}
+
+export interface ReplanResultDto {
+  disruption: DisruptionDto;
+  verdict: VerdictDto;
+  available_minutes_tonight: number;
+  base_window_minutes: number;
+  substituted: boolean;
+}
+
+/** Logs one disruption and returns the Adaptive Planner's recomputed verdict (08_ADAPTIVE_PLANNER.md). */
+export async function logDisruption(input: LogDisruptionInput): Promise<ReplanResultDto> {
+  return invoke<ReplanResultDto>("log_disruption", { input });
+}
+
+/** The explainability trail behind every recompute (§5). */
+export async function listRecentDisruptions(limit = 10): Promise<DisruptionDto[]> {
+  return invoke<DisruptionDto[]>("list_recent_disruptions", { limit });
 }
 
 export interface CreateProfileInput {

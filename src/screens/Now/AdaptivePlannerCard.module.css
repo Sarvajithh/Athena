@@ -1,0 +1,137 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.headerLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+}
+
+.toggleButton {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  font: inherit;
+  transition: color var(--duration-fast, 120ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1)),
+    border-color var(--duration-fast, 120ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.toggleButton:hover,
+.toggleButton:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.windowNote {
+  color: var(--text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface-raised);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.select,
+.numberInput,
+.textInput {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+}
+
+.select:focus-visible,
+.numberInput:focus-visible,
+.textInput:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.submitButton {
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--accent-on);
+  border: none;
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  font: inherit;
+  transition: background var(--duration-fast, 120ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.submitButton:hover:not(:disabled),
+.submitButton:focus-visible:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--confidence-insufficient, #d68a8a);
+}
+
+.lastReasoning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.timeline {
+  margin-top: var(--space-1);
+}
+
+.entryBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entryHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-primary);
+}
+
+.entryTime {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.entryNote,
+.entryReasoning {
+  color: var(--text-secondary);
+}

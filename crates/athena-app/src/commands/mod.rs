@@ -6,6 +6,7 @@
 //! health-check/version round trip, nothing domain-related yet.
 pub mod bootstrap;
 pub mod onboarding;
+pub mod planner;
 use serde::Serialize;
 
 /// The shape returned to the frontend. Kept as an explicit typed struct

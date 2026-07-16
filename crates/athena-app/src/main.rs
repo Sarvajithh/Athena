@@ -61,6 +61,8 @@ fn main() {
             commands::bootstrap::get_bootstrap_state,
             commands::onboarding::create_profile,
             commands::onboarding::commit_semester_setup,
+            commands::planner::log_disruption,
+            commands::planner::list_recent_disruptions,
         ])
         .setup(|app| {
             let paths = resolve_app_paths(app.handle())?;

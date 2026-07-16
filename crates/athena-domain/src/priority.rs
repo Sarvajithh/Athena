@@ -35,6 +35,17 @@ pub struct RankedCandidate {
     pub reasoning: String,
 }
 
+pub fn rank(candidates: &[DeadlineCandidate]) -> Vec<&DeadlineCandidate> {
+    let mut sorted: Vec<&DeadlineCandidate> = candidates.iter().collect();
+
+    sorted.sort_by(|a, b| {
+        leverage_rank(&a.leverage_class)
+            .cmp(&leverage_rank(&b.leverage_class))
+            .then_with(|| a.due_at.cmp(&b.due_at))
+    });
+
+    sorted
+}
 #[derive(Debug, Clone)]
 pub struct Verdict {
     pub headline: String,
@@ -100,12 +111,7 @@ fn is_close(a: &DeadlineCandidate, b: &DeadlineCandidate) -> bool {
 /// nothing open — the correct, expected cold-start state
 /// (01_ARCHITECTURE.md §7.1; MASTER_SPECIFICATION.md §4.7).
 pub fn resolve_priority(candidates: &[DeadlineCandidate]) -> Verdict {
-    let mut sorted: Vec<&DeadlineCandidate> = candidates.iter().collect();
-    sorted.sort_by(|a, b| {
-        leverage_rank(&a.leverage_class)
-            .cmp(&leverage_rank(&b.leverage_class))
-            .then_with(|| a.due_at.cmp(&b.due_at))
-    });
+    let sorted = rank(candidates);
 
     match sorted.first() {
         None => Verdict {

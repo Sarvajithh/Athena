@@ -10,7 +10,7 @@
 //! reviewed deliverable" spirit applied to module scaffolding).
 
 pub mod error;
+pub mod planner;
 pub mod priority;
 
 pub use error::DomainError;
-

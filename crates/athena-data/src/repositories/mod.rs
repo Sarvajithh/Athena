@@ -10,6 +10,7 @@
 pub mod course;
 pub mod deadline;
 pub mod decision;
+pub mod disruption;
 pub mod event_log;
 pub mod profile;
 pub mod semester;

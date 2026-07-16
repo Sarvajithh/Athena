@@ -27,7 +27,13 @@ export function BootstrapProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const next = await getBootstrapState();
+      // Local calendar day, per the user's own clock — the Adaptive
+      // Planner's `schedule_disruptions.date` is a local date, not UTC
+      // (08_ADAPTIVE_PLANNER.md §5), so "today" is computed here rather
+      // than in athena-domain/athena-data (neither takes a date/time
+      // dependency — see ipc/bindings.ts's `getBootstrapState` doc comment).
+      const localDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const next = await getBootstrapState(localDate);
       setState(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
