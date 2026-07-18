@@ -41,6 +41,18 @@
   --confidence-inferred: #9896aa;
   --confidence-insufficient: #59586a;
 
+  /* ---- Background styling (Task 3) — a subtle, low-opacity gradient
+     applied to AppShell's main content area / screen roots. Two radial
+     washes using the existing accent color at very low opacity, plus
+     the canvas color as the base, so it reads as an ambient glow, not
+     a colored panel — deliberately unobtrusive and never affecting
+     text contrast, since text always renders on top of --bg-surface/
+     --bg-surface-raised card backgrounds, not directly on this
+     gradient. New custom properties (not hardcoded per-screen) so
+     intensity/position can be tuned centrally later. ---- */
+  --bg-content-gradient: radial-gradient(circle at 15% 0%, rgba(139, 124, 246, 0.07), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(139, 124, 246, 0.05), transparent 45%);
+
   /* ---- Spacing — 8px base unit (§9) ---- */
   --space-1: 4px;
   --space-2: 8px;

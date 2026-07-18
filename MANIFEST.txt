@@ -1,177 +1,312 @@
-Athena — three-task implementation manifest
-=============================================
+MANIFEST — Athena four-task upgrade pass
+==========================================
 
-Verified against the repo before starting (per task instructions):
-- Settings IS a 5th nav-rail route (src/router.tsx, src/screens/Settings/) — confirmed.
-- API key save/has/delete for Anthropic + Hugging Face IS wired into Settings — confirmed
-  (src/screens/Settings/index.tsx calls save/has/deleteAnthropicApiKey and the HF equivalents).
-- getDailyBriefing / getWeeklyPlan / getWeaknessAnalysis bindings EXIST in src/ipc/bindings.ts
-  but are NOT called anywhere in the frontend outside bindings.ts itself — i.e. daily briefing,
-  weekly plan, and weakness analysis are NOT actually wired into Settings or any screen yet,
-  despite the task context asserting they were. This is outside the scope of Tasks 1-3 (none of
-  the three tasks ask for this wiring), so it was left untouched, but is flagged here since the
-  context description doesn't match the repo's actual state.
-- Gmail / Google Classroom / Notion OAuth connectors ARE wired into ConnectorsStep.tsx, calling
-  crates/athena-app/src/commands/integrations.rs — confirmed.
-- Codeforces/LeetCode snapshot data IS wired into Trajectory — confirmed (not touched by any task).
-- crates/athena-data/src/repositories/course.rs and deadline.rs have ONLY list_by_semester /
-  insert_courses (course.rs) and list_by_semester / list_open / list_open_career /
-  insert_deadlines (deadline.rs) — confirmed NO update/delete/mark-done commands. No such call
-  was invented anywhere in this change.
-- src/screens/SemesterSetup/ did NOT have separate "CourseEntryStep"/"DeadlineEntryStep" files —
-  course and deadline entry were inline JSX blocks inside index.tsx's step===1/step===2 branches.
-  These were extracted into their own components as part of Task 3 (see below).
+Read the actual repo before changing anything (per instructions): CURRENT_CONTEXT.md
+and NEXT_TASK.md in the repo root are stale/out of date (they describe an early,
+onboarding-only state) — the real `git log` and directory tree show a much further-
+along app (Now/DecisionLog/SemesterSetup/Settings/Trajectory screens, an Adaptive
+Planner, OAuth connectors, AI providers, etc.). All work below was scoped against the
+actual code, not those two files.
 
-TASK 1 — Real desktop app packaging
-------------------------------------
-crates/athena-app/tauri.conf.json
-  - bundle.icon populated with 32x32.png, 128x128.png, 128x128@2x.png, icon.icns, icon.ico
-    (was an empty array).
-  - Added bundle.publisher, bundle.category, bundle.shortDescription, bundle.longDescription
-    (required/recommended by tauri-cli for installer metadata on some targets — none existed
-    before). bundle.identifier ("com.athena.app") and productName ("Athena") were already
-    present and were NOT changed.
-  - No other field changed: window width/height/resizable/title, build config, and CSP were
-    left exactly as-is.
+No Rust toolchain (cargo/rustc) was available in this sandbox, so Rust changes could
+not be `cargo build`/`cargo test`-verified directly. Every Rust change was written by
+close reading of the existing, working code it sits next to (same repository/command/
+migration patterns, same error types, same test harness) and by verifying third-party
+crate APIs (`keyring` 2.x's `Error` enum shape, `aes-gcm` 0.10's `Key`/`Nonce`/`Aead`
+usage) against their published docs before writing against them. The frontend side was
+fully verified: `npx tsc --noEmit` passes clean and `python3 scripts/check_ipc_contract.py`
+passes, both after every task's frontend changes.
 
-crates/athena-app/icons/icon.png
-  - Re-saved via Pillow at the same 1024x1024 resolution (re-encode only, not a redesign) as
-    part of generating the derived set below from the single source file.
+Cargo.lock was NOT regenerated (no cargo available) — running `cargo build` once on a
+real machine will update it for the four new Cargo.toml dependencies (Task 4).
 
-New files, all derived from the existing icons/icon.png (no new icon design):
-  crates/athena-app/icons/32x32.png            — Tauri default small PNG size
-  crates/athena-app/icons/128x128.png           — Tauri default PNG size
-  crates/athena-app/icons/128x128@2x.png        — Tauri default @2x PNG size (256x256)
-  crates/athena-app/icons/icon.ico              — Windows installer icon (16/24/32/48/64/128/256 px)
-  crates/athena-app/icons/icon.icns             — macOS installer icon
-  crates/athena-app/icons/Square30x30Logo.png   — Windows Store tile assets, sizes per
-  crates/athena-app/icons/Square44x44Logo.png     Microsoft's MSIX/AppX manifest requirements,
-  crates/athena-app/icons/Square71x71Logo.png     which tauri-cli's Windows bundler expects
-  crates/athena-app/icons/Square89x89Logo.png     when generating a Store-compatible package.
-  crates/athena-app/icons/Square107x107Logo.png
-  crates/athena-app/icons/Square142x142Logo.png
-  crates/athena-app/icons/Square150x150Logo.png
-  crates/athena-app/icons/Square284x284Logo.png
-  crates/athena-app/icons/Square310x310Logo.png
-  crates/athena-app/icons/StoreLogo.png
+--------------------------------------------------------------------
+TASK 1 — Connectors relocated from SemesterSetup into Settings
+--------------------------------------------------------------------
+Frontend-only, as scoped. Verified starting state first: all 6 connectors (Codeforces,
+LeetCode, GitHub, Gmail, Notion, Google Classroom) lived ONLY inside
+SemesterSetup/ConnectorsStep.tsx; Settings had no connector UI at all (only
+ApiKeyPanel). So this was pure relocation, not de-duplication.
 
-ASSUMED/GUESSED VALUES (flagged per task instructions):
-  - bundle.publisher: "Athena" — guessed from productName; there is no publisher/company name
-    anywhere else in the repo. Replace with the real legal/publisher name before shipping.
-  - bundle.category: "Education" — guessed from the app's stated purpose (semester planning /
-    study assistant) in phase_docs and README-adjacent docs. Tauri's bundle.category is drawn
-    from a fixed enum (e.g. "Education", "Productivity", "DeveloperTool", …); "Education" was
-    the closest fit but is not sourced from any explicit repo statement.
-  - bundle.shortDescription / longDescription: written from the app's own docs
-    (06_AI_ENGINE.md, phase_docs) summarizing what Athena does. Not copied from an existing
-    marketing string anywhere in the repo (none exists), so treat as a first draft.
-  - No windows-specific signing identity, macOS signing identity, or Linux .deb/.rpm metadata
-    (maintainer email, etc.) was added — tauri-cli will use its own defaults for these, and the
-    task scope was limited to bundle.icon and adjacent bundle metadata.
+- DELETED src/screens/SemesterSetup/ConnectorsStep.tsx
+    Its 6 account/OAuth connector panels (CodeforcesPanel, LeetCodePanel, GithubPanel,
+    GmailPanel, ClassroomPanel, NotionPanel) moved verbatim (same component bodies,
+    same IPC calls) into the new file below. Its 3 file-based import panels
+    (CalendarImportPanel, PdfImportPanel, CsvImportPanel) moved verbatim into
+    ImportStep.tsx below.
 
-TASK 2 — Dynamic/responsive screens
--------------------------------------
-Audited every .module.css file under src/ (components/shared, components/shell,
-components/modals, and all six screens). Findings:
+- NEW src/screens/SemesterSetup/ImportStep.tsx
+    Replaces ConnectorsStep.tsx inside the wizard. Keeps only the 3 file-based import
+    mechanisms (calendar .ics, PDF, CSV) — reasoning per the task's "use judgment" note:
+    these three feed the wizard's own Deadlines step during initial setup and need no
+    account connection, so they stay in the once-a-term wizard. The 6 OAuth/account
+    connectors are a standing, revisitable relationship with an external service, not a
+    one-time setup action, so they do not belong in a wizard — they moved to Settings.
 
-  - All genuinely fixed px width/height declarations found (nav rail 64px, nav-rail-item 44px,
-    title-bar buttons/dots, status dots/badges 6-8px, modal dialog 420px with a
-    calc(100vw - …) safety clamp already in place) are intentional fixed-size UI chrome, not
-    content containers, and were left unchanged.
-  - Grid layouts already use minmax()/auto-fit responsibly (PhaseStrip, MetricSwimlane) and
-    already reuse the existing @media (max-width: 1024px) breakpoint; no new breakpoint was
-    introduced.
-  - THE ACTUAL BUG: every screen's root `.screen` class sets `max-width: <N>px` but no `margin`
-    or explicit `width`, so at viewports meaningfully wider than that max-width (1440px,
-    1920px+) the screen content sits pinned to the left edge of `.content` with a large dead
-    gap on the right, instead of being centered in the available space. Fixed by adding
-    `width: 100%; margin: 0 auto;` to `.screen` in the five screens below — this makes each
-    screen's content column center itself and scale sensibly between the 1024x768 minimum and
-    larger desktop widths, without touching the per-screen max-width values (960/1080/760px)
-    that were already chosen per screen.
-  - No JS-driven viewport hook was needed or added — the issue and its fix were purely CSS.
+- NEW src/screens/Settings/ConnectorsSection.tsx
+    Hosts the 6 relocated account connector panels, reusing their exact component
+    bodies from the deleted ConnectorsStep.tsx (relocation, not rewrite, per the task).
+
+- MODIFIED src/screens/SemesterSetup/index.tsx
+    Swapped the `ConnectorsStep` import/usage for `ImportStep`; renamed that wizard
+    step's label from "Connectors" to "Import" in STEP_LABELS (the step's contents
+    changed, so its label should say what's actually there now).
+
+- MODIFIED src/screens/Settings/index.tsx
+    Renders `<ConnectorsSection />` below the existing AI-providers section; updated
+    doc comment.
+
+- MODIFIED src/screens/Settings/Settings.module.css
+    Added `.repeatRow` and `.secondaryButton` classes (copied from
+    SemesterSetup.module.css's own definitions) — the relocated panels reference these
+    class names and Settings.module.css didn't have them yet.
+
+- Doc-comment-only stale references left alone (no functional effect): a few comments
+  in Trajectory/*.tsx and DeadlineEntryStep.tsx still say "ConnectorsStep.tsx" as a
+  historical pointer. Not fixed, to keep this task's diff scoped to functional code —
+  flagged here for visibility.
+
+--------------------------------------------------------------------
+TASK 2 — Daily & weekly routine questionnaires (backend change required, as scoped)
+--------------------------------------------------------------------
+Confirmed no existing table/repository/command for this before building (checked
+migrations/ and repositories/ — nothing matched).
+
+Backend (Rust) changes were necessary and unavoidable for this task specifically: a
+frontend-only implementation cannot persist responses across app restarts or expose an
+"already answered today" check without a queryable, durable store — which requires a
+new table, a new repository, and new Tauri commands, exactly as the task scoped.
+
+- NEW crates/athena-data/migrations/V6__routine_questionnaires.sql
+    Two new, purely additive tables: `daily_routine_responses`,
+    `weekly_routine_responses` (two tables rather than one cadence-flagged table — see
+    the migration's own doc comment for why: the two questionnaires have genuinely
+    different shapes, matching this schema's existing one-shape-per-table convention).
+    No existing table/column touched.
+
+- NEW crates/athena-data/src/repositories/routine.rs
+    `insert_daily_response` / `list_recent_daily` / `has_response_for_date` and the
+    weekly equivalents, following course.rs/deadline.rs's exact repository style
+    (typed row structs, `rusqlite::params!`, `DataError` via `?`). Includes unit tests
+    using the same `open_and_migrate` + `tempfile::NamedTempFile` harness every other
+    repository test file uses.
+
+- MODIFIED crates/athena-data/src/repositories/mod.rs
+    Registered `pub mod routine;`.
+
+- NEW crates/athena-app/src/commands/routine.rs
+    `submit_daily_routine_response`, `has_daily_routine_response`,
+    `list_recent_daily_routine_responses`, and the weekly equivalents. Follows
+    commands/planner.rs's style (typed input struct in, typed DTO out,
+    `State<'_, Mutex<Connection>>`).
+
+- MODIFIED crates/athena-app/src/commands/mod.rs
+    Registered `pub mod routine;`.
+
+- MODIFIED crates/athena-app/src/main.rs
+    Registered the 6 new commands in `generate_handler!`.
+
+Question design (daily, quick — feeds the Adaptive Planner in athena-domain::planner):
+    - energy_level (1-5)
+    - hours_available_tonight — a direct, user-reported number alongside
+      `available_minutes_tonight`'s existing disruption-derived computation
+    - had_disruption_today (+ optional note) — a lightweight, opt-in corroborating
+      signal alongside the dedicated schedule_disruptions flow, not a duplicate of it
+    - focus_rating (1-5) — retrospective, stored for trend purposes
+
+Question design (weekly, longer — reflective, feeds longer-horizon surfaces like
+get_weekly_plan / get_weakness_analysis rather than tonight specifically):
+    - overall_energy_trend (1-5), satisfaction_with_progress (1-5)
+    - hardest_course_id (optional, FK to courses)
+    - biggest_blocker (optional free text)
+    - hours_studied_estimate (optional)
+    - wants_deep_work_adjustment (bool)
+    - notes (optional free text)
+
+Frontend:
+- NEW src/screens/Now/RoutineQuestionnaireCard.tsx (+ .module.css)
+    Checks `has_daily_routine_response`/`has_weekly_routine_response` on mount; renders
+    nothing if both are already answered or no semester is active (never nags). Offers
+    "Answer today's check-in" / "Answer this week's review" buttons that expand into
+    `DailyForm`/`WeeklyForm` (both exported so Settings can reuse them verbatim).
+
+- MODIFIED src/screens/Now/index.tsx
+    Renders `<RoutineQuestionnaireCard />` under the Adaptive Planner card.
+
+- NEW src/screens/Settings/RoutineTriggerSection.tsx
+    The required manual "answer now" entry point, reusing the exact same
+    `DailyForm`/`WeeklyForm` components (no duplicated form logic). Uses the shared
+    `useBootstrap()` context for the course list the weekly form's course dropdown
+    needs.
+
+- MODIFIED src/screens/Settings/index.tsx
+    Renders `<RoutineTriggerSection />`.
+
+- MODIFIED src/ipc/bindings.ts
+    Added `DailyRoutineResponseDto`/`WeeklyRoutineResponseDto` types and
+    `submitDailyRoutineResponse` / `hasDailyRoutineResponse` /
+    `listRecentDailyRoutineResponses` / `submitWeeklyRoutineResponse` /
+    `hasWeeklyRoutineResponse` / `listRecentWeeklyRoutineResponses` functions, matching
+    the new Rust commands field-for-field (verified by
+    `scripts/check_ipc_contract.py`, which passes).
+
+Nothing existing was changed — additive only, per the task's explicit requirement.
+
+--------------------------------------------------------------------
+TASK 3 — Bigger text & background styling (frontend only, as scoped)
+--------------------------------------------------------------------
+Checked git history first: `git log -- src/theme/typography.css` shows exactly one
+commit (the original Sprint2 spec values). No prior bump had actually landed despite
+the task text anticipating one might have — so this is the first real increase.
+
+- MODIFIED src/theme/typography.css
+    Base type scale increased ~20-30% across the board via the existing CSS variables
+    (global effect, no per-component changes): display 56→68px, headline 24→30px, body
+    & body-medium 15→18px, caption 13→15px, micro 11→13px. Also nudged body/body-medium
+    line-height 1.4→1.45 for readability at the larger size.
+
+- MODIFIED src/theme/tokens.css
+    Added `--bg-content-gradient`: two very-low-opacity radial washes using the
+    existing `--accent` color (0.05-0.07 alpha) over the existing `--bg-canvas` base —
+    a new custom property, not a hardcoded per-screen value, so it can be retuned
+    centrally later.
+
+- MODIFIED src/components/shell/AppShell.module.css
+    `.content` (the main content area) now paints `var(--bg-content-gradient),
+    var(--bg-canvas)` as its background. Text itself always sits on top of
+    `--bg-surface`/`--bg-surface-raised` card backgrounds, never directly on this
+    gradient, so contrast is unaffected.
+
+Overflow/clipping sanity check (Now, DecisionLog), as required:
+    - Found one real risk: `AdaptivePlannerCard`'s `.entryHeader` (a flex row pairing a
+      disruption-type label against a `white-space: nowrap` timestamp via
+      `justify-content: space-between`) could clip/overflow at the larger type scale on
+      narrower widths. FIXED by adding `flex-wrap: wrap` to `.entryHeader` in
+      AdaptivePlannerCard.module.css.
+    - DecisionLog and VerdictCard use `max-width` in `ch` units (relative to font size)
+      and no fixed pixel widths on text containers — these already scale correctly with
+      the larger type and needed no change.
+    - NavRailItem's `nowrap` tooltip is an absolutely-positioned hover overlay with a
+      fixed-size 44px trigger button; unaffected by body/caption text-scale changes and
+      needed no change.
+
+--------------------------------------------------------------------
+TASK 4 — HuggingFace/keychain graceful fallback (Linux + Windows)
+--------------------------------------------------------------------
+Read crates/athena-app/src/keychain.rs fully first, as required. Backend (Rust) change
+was necessary and unavoidable for this task specifically — no frontend code can catch
+or recover from a native OS credential-store failure; only the Rust layer that calls
+`keyring::Entry` can.
+
+- MODIFIED crates/athena-app/src/keychain.rs (the only Rust file this task touches,
+  besides the one flagged, unavoidable exception below)
+    Verified against `keyring` 2.x's own published docs: its default ("v1") feature
+    gives exactly the three native backends (macOS Keychain / Windows Credential
+    Manager / Linux Secret Service) and ships no built-in file-based fallback option —
+    so Task 4's option (a) does not apply, and option (b) (local encrypted-file
+    fallback) was implemented instead, for every credential this module manages
+    (GitHub token, the 3 OAuth token sets, both AI-provider keys) via three new
+    internal helpers — `store_secret` / `load_secret` / `delete_secret` — that every
+    existing accessor now routes through instead of calling `keyring::Entry` directly.
+
+    Fallback activates only when `keyring::Error::PlatformFailure` or `::NoStorageAccess`
+    is returned (verified these are the two actual "backend unavailable" variants in
+    keyring's `Error` enum against its docs — not a `NotSupportedPlatform` variant,
+    which does not exist) — never for `NoEntry` or any other error, so a genuine
+    problem is never silently masked.
+
+    Fallback store: AES-256-GCM (via the new `aes-gcm` dependency) encrypted JSON file
+    at `<user-data-dir>/athena-app/keychain-fallback/fallback-secrets.json`, keyed by a
+    32-byte key generated on first use and stored alongside it
+    (`fallback.key`, owner-only 0600 permissions on Unix). Every fallback activation
+    logs one `tracing::warn!("using local fallback storage, OS keychain unavailable")`
+    per process (not per call) via the existing tracing setup.
+
+    Windows: `keyring = "2"` with no feature flags already gets the Windows Credential
+    Manager backend by default (verified via keyring's own crates.io/docs.rs
+    description: the default feature works "on Mac, Windows, and *nix... using exactly
+    the same API"); no Cargo.toml feature-flag change was needed for that. The same
+    `store_secret`/`load_secret`/`delete_secret` fallback path applies unconditionally
+    on Windows too, in case Credential Manager is ever unavailable there, per the
+    task's explicit "add the same fallback there too" instruction.
+
+- MODIFIED crates/athena-app/Cargo.toml (dependency only, as scoped)
+    NEW DEPENDENCY: `aes-gcm = "0.10"` — a well-known, NCC-Group-audited RustCrypto AEAD
+    crate, needed because `keyring` has no built-in file-fallback option (see above).
+    Also added `rand = "0.8"`, `base64 = "0.22"` (both already present transitively in
+    Cargo.lock via other dependencies, at compatible versions — added directly here
+    only because keychain.rs now calls them directly) and `dirs = "5"` (resolves the
+    OS-standard per-user data directory without needing an `AppHandle` threaded into
+    keychain.rs, which takes none today).
+
+- Frontend notice, per Task 4's explicit requirement ("Surface a clear, non-scary
+  message in the frontend... if fallback storage is active"):
+    FLAGGED DEVIATION FROM THE "keychain.rs + Cargo.toml only" SCOPE NOTE: satisfying
+    this requirement is impossible without one new IPC command, since the frontend has
+    no other way to learn fallback status. Rather than a new file, the single command
+    was added as a one-line addition to crates/athena-app/src/commands/mod.rs (which
+    already hosts one free-standing command, `get_app_version`, as precedent) plus its
+    registration in main.rs's `generate_handler!` — the minimal possible exception,
+    called out explicitly here rather than silently exceeding the stated scope.
+        - MODIFIED crates/athena-app/src/commands/mod.rs: added
+          `is_using_keychain_fallback` command, calling
+          `keychain::is_using_fallback_storage()` (a new pub fn added in keychain.rs).
+        - MODIFIED crates/athena-app/src/main.rs: registered it.
+        - MODIFIED src/ipc/bindings.ts: added `isUsingKeychainFallback()`.
+        - MODIFIED src/screens/Settings/index.tsx: checks it on mount; renders a plain-
+          language notice ("Your device's secure keychain isn't available right now,
+          so any keys or tokens you save below are being stored in an encrypted file
+          in Athena's own app-data folder instead...") above the AI-providers section,
+          where API keys are entered — satisfying the task's "where API keys are
+          entered" placement.
+
+Guessed/inferred values, flagged:
+    - The exact AES-GCM file format (nonce || ciphertext, base64-encoded, one JSON map
+      keyed by keychain username) is this implementation's own design — Task 4 left the
+      encrypted-file format unspecified beyond "a minimal well-known crate."
+    - `dirs = "5"` was chosen (not previously a dependency) as the minimal way to
+      resolve a per-user data directory without threading `AppHandle` through
+      keychain.rs; an alternative would have been to accept an `AppHandle` parameter
+      into every keychain function, which would have required touching every call site
+      (commands/ai.rs, commands/integrations.rs, oauth_loopback.rs) — a much larger,
+      unscoped change Task 4 did not ask for.
+
+--------------------------------------------------------------------
+Full file list (also visible via `git status` in the zip's repo root)
+--------------------------------------------------------------------
+Deleted:
+    src/screens/SemesterSetup/ConnectorsStep.tsx
+
+New:
+    src/screens/SemesterSetup/ImportStep.tsx
+    src/screens/Settings/ConnectorsSection.tsx
+    src/screens/Settings/RoutineTriggerSection.tsx
+    src/screens/Now/RoutineQuestionnaireCard.tsx
+    src/screens/Now/RoutineQuestionnaireCard.module.css
+    crates/athena-data/migrations/V6__routine_questionnaires.sql
+    crates/athena-data/src/repositories/routine.rs
+    crates/athena-app/src/commands/routine.rs
+    MANIFEST.txt (this file)
 
 Modified:
-  src/screens/Now/Now.module.css                — `.screen`: + width: 100%; margin: 0 auto;
-  src/screens/Trajectory/Trajectory.module.css   — `.screen`: + width: 100%; margin: 0 auto;
-  src/screens/DecisionLog/DecisionLog.module.css — `.screen`: + width: 100%; margin: 0 auto;
-  src/screens/SemesterSetup/SemesterSetup.module.css — `.screen`: + width: 100%; margin: 0 auto;
-    (this file also gained new classes for Task 3, see below)
-  src/screens/Settings/Settings.module.css       — `.screen`: + width: 100%; margin: 0 auto;
+    src/screens/SemesterSetup/index.tsx
+    src/screens/Settings/index.tsx
+    src/screens/Settings/Settings.module.css
+    src/screens/Now/index.tsx
+    src/screens/Now/AdaptivePlannerCard.module.css
+    src/theme/typography.css
+    src/theme/tokens.css
+    src/components/shell/AppShell.module.css
+    src/ipc/bindings.ts
+    crates/athena-data/src/repositories/mod.rs
+    crates/athena-app/src/commands/mod.rs
+    crates/athena-app/src/keychain.rs
+    crates/athena-app/src/main.rs
+    crates/athena-app/Cargo.toml
 
-TASK 3 — Dynamic Semester Setup
------------------------------------
-New files:
-  src/screens/SemesterSetup/types.ts
-    - CourseRowState / DeadlineRowState interfaces and newCourseRow() / newDeadlineRow() /
-      LEVERAGE_OPTIONS / CATEGORY_OPTIONS, extracted out of index.tsx so step components don't
-      import from the wizard's own file.
-
-  src/screens/SemesterSetup/CourseEntryStep.tsx
-    - Extracted from index.tsx's inline step===1 JSX. Accepts `courses` (initial/current
-      values) as a prop and emits every add/edit/remove via `onChange(nextArray)` — no
-      dependency on wizard step-index state, so it can be mounted anywhere.
-
-  src/screens/SemesterSetup/DeadlineEntryStep.tsx
-    - Same pattern as CourseEntryStep, extracted from the inline step===2 JSX. Takes
-      `deadlines` + read-only `courses` (for the "linked course" dropdown) as props, emits via
-      `onChange`.
-
-  src/screens/SemesterSetup/SemesterAtAGlance.tsx
-    - New "current semester at a glance" summary. Replaces the old placeholder Card that only
-      showed a bare course/deadline count. Uses the existing Card and CollapseList shared
-      components to list every current-semester course and deadline with its live `status`
-      field (CourseStatus / DeadlineStatus from ipc/bindings.ts), grouped under "Courses" and
-      "Deadlines". Falls back to the existing EmptyState component when nothing is tracked yet.
-    - Every row renders a disabled "Edit" button with a title tooltip
-      ("Editing not available yet — course and deadline mutation is not supported this
-      semester.") rather than omitting edit affordance silently, per the backend constraint
-      (no update/delete/mark-done commands exist yet in course.rs/deadline.rs).
-
-  ConnectorsStep.tsx was audited against the same "decouple from wizard step-index" requirement
-  and found to already satisfy it — it only takes `styles` and `onStageDeadlines` as props and
-  has no dependency on step index. It was not modified.
-
-Modified:
-  src/screens/SemesterSetup/index.tsx
-    - Replaced the inline course-entry and deadline-entry JSX blocks with
-      <CourseEntryStep styles={styles} courses={courses} onChange={setCourses} /> and
-      <DeadlineEntryStep styles={styles} deadlines={deadlines} courses={courses}
-        onChange={setDeadlines} />.
-    - Replaced the old bare-count placeholder Card in the non-wizard ("at a glance") view with
-      <SemesterAtAGlance courses={state?.courses ?? []} deadlines={state?.deadlines ?? []} />.
-    - Local CourseRowState/DeadlineRowState/newCourseRow/newDeadlineRow/LEVERAGE_OPTIONS/
-      CATEGORY_OPTIONS definitions removed in favor of the shared types.ts.
-    - commitSemesterSetup call, wizard step machinery (step index, canAdvanceFromStep,
-      canCommit, handleCommit), and all Tauri command usage were left exactly as they were —
-      no new command calls were introduced.
-
-  src/screens/SemesterSetup/SemesterSetup.module.css
-    - Added .glanceSection / .glanceGroup / .glanceGroupTitle / .glanceList / .glanceRow /
-      .glanceMeta / .glanceTitle / .glanceDetail / .editDisabled classes for
-      SemesterAtAGlance.tsx. Nothing existing was removed except the now-unused
-      .placeholderCard usage in index.tsx (the CSS class itself was left in place in case
-      something else references it — grep showed nothing does, but removing unused CSS wasn't
-      part of the task scope).
-
-Blocked on backend
-------------------
-  - Nothing new was blocked. The one constraint (no course/deadline update/delete/mark-done)
-    was handled by the disabled "Edit" affordance in SemesterAtAGlance.tsx rather than by
-    inventing a Tauri command — no command call was added anywhere for mutation.
-  - Separately (not a Task 1-3 blocker, just noted for accuracy): the AI daily-briefing/
-    weekly-plan/weakness-analysis bindings exist but nothing in the frontend calls them yet.
-    Wiring them up was not requested by any of the three tasks, so no command call was added or
-    removed for this either.
-
-Verification performed
------------------------
-  - crates/athena-app/tauri.conf.json validated as well-formed JSON.
-  - `npx tsc --noEmit` run against the whole frontend: one pre-existing error in
-    ConnectorsStep.tsx (line ~597, "Object is possibly 'undefined'") was confirmed present
-    before any of these changes (verified via `git stash`) and is unrelated to Tasks 1-3; it
-    was left as-is since Task 3 explicitly scopes ConnectorsStep as already-compliant and no
-    task asked for a ConnectorsStep bug fix.
-  - `npx vite build` completes successfully with these changes (only a pre-existing, unrelated
-    "ineffective dynamic import" warning about SemesterSetup being both statically and
-    dynamically imported, which predates this change and isn't part of any of the three tasks).
+Verification performed in this sandbox:
+    - `npx tsc --noEmit -p tsconfig.json` — clean, after every frontend change.
+    - `python3 scripts/check_ipc_contract.py` — passes.
+    - Rust changes could not be `cargo build`/`cargo test`-verified (no toolchain
+      available); reviewed by hand against neighboring code and third-party docs
+      instead, as described above.

@@ -6,6 +6,7 @@ import { HealthStrip } from './HealthStrip';
 import { MissionStrip } from './MissionStrip';
 import styles from './Now.module.css';
 import { QuickLaunch } from './QuickLaunch';
+import { RoutineQuestionnaireCard } from './RoutineQuestionnaireCard';
 import { VerdictCard } from './VerdictCard';
 
 import { LoadingState } from '../../components/shared/LoadingState';
@@ -105,6 +106,8 @@ export default function Now() {
         recentDisruptions={state.recent_disruptions}
         onLogged={refresh}
       />
+
+      <RoutineQuestionnaireCard semesterActive={state.current_semester !== null} courses={state.courses} />
 
       <div className={styles.secondaryRow}>
         <DeepWorkAllocationCard allocation={allocation} />

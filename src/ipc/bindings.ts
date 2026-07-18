@@ -13,6 +13,12 @@ export async function getAppVersion(): Promise<AppVersionInfo> {
   return invoke<AppVersionInfo>("get_app_version");
 }
 
+/** Whether credential storage is currently using the local encrypted-file
+ * fallback because the OS keychain backend is unavailable (Task 4). */
+export async function isUsingKeychainFallback(): Promise<boolean> {
+  return invoke<boolean>("is_using_keychain_fallback");
+}
+
 // ---------------------------------------------------------------------
 // Onboarding + bootstrap — mirrors
 // crates/athena-app/src/commands/{bootstrap,onboarding}.rs and the
@@ -202,6 +208,86 @@ export async function logDisruption(input: LogDisruptionInput): Promise<ReplanRe
 /** The explainability trail behind every recompute (§5). */
 export async function listRecentDisruptions(limit = 10): Promise<DisruptionDto[]> {
   return invoke<DisruptionDto[]>("list_recent_disruptions", { limit });
+}
+
+// ---------------------------------------------------------------------
+// Daily / weekly routine questionnaires (V6 migration)
+// ---------------------------------------------------------------------
+
+export interface DailyRoutineResponseDto {
+  id: number;
+  date: string;
+  energy_level: number;
+  hours_available_tonight: number;
+  had_disruption_today: boolean;
+  disruption_note: string | null;
+  focus_rating: number;
+  submitted_at: string;
+}
+
+export interface SubmitDailyRoutineInput {
+  date: string;
+  energy_level: number;
+  hours_available_tonight: number;
+  had_disruption_today: boolean;
+  disruption_note: string | null;
+  focus_rating: number;
+}
+
+/** Submits today's quick check-in — energy, hours free tonight, focus. */
+export async function submitDailyRoutineResponse(
+  input: SubmitDailyRoutineInput,
+): Promise<DailyRoutineResponseDto> {
+  return invoke<DailyRoutineResponseDto>("submit_daily_routine_response", { input });
+}
+
+/** Whether `date` (`YYYY-MM-DD`) has already been answered — don't nag. */
+export async function hasDailyRoutineResponse(date: string): Promise<boolean> {
+  return invoke<boolean>("has_daily_routine_response", { date });
+}
+
+export async function listRecentDailyRoutineResponses(limit = 14): Promise<DailyRoutineResponseDto[]> {
+  return invoke<DailyRoutineResponseDto[]>("list_recent_daily_routine_responses", { limit });
+}
+
+export interface WeeklyRoutineResponseDto {
+  id: number;
+  week_starting: string;
+  overall_energy_trend: number;
+  satisfaction_with_progress: number;
+  hardest_course_id: number | null;
+  biggest_blocker: string | null;
+  hours_studied_estimate: number | null;
+  wants_deep_work_adjustment: boolean;
+  notes: string | null;
+  submitted_at: string;
+}
+
+export interface SubmitWeeklyRoutineInput {
+  week_starting: string;
+  overall_energy_trend: number;
+  satisfaction_with_progress: number;
+  hardest_course_id: number | null;
+  biggest_blocker: string | null;
+  hours_studied_estimate: number | null;
+  wants_deep_work_adjustment: boolean;
+  notes: string | null;
+}
+
+/** Submits this week's longer, reflective check-in. */
+export async function submitWeeklyRoutineResponse(
+  input: SubmitWeeklyRoutineInput,
+): Promise<WeeklyRoutineResponseDto> {
+  return invoke<WeeklyRoutineResponseDto>("submit_weekly_routine_response", { input });
+}
+
+/** Whether `weekStarting` (`YYYY-MM-DD`, the week's Monday) has already been answered. */
+export async function hasWeeklyRoutineResponse(weekStarting: string): Promise<boolean> {
+  return invoke<boolean>("has_weekly_routine_response", { weekStarting });
+}
+
+export async function listRecentWeeklyRoutineResponses(limit = 8): Promise<WeeklyRoutineResponseDto[]> {
+  return invoke<WeeklyRoutineResponseDto[]>("list_recent_weekly_routine_responses", { limit });
 }
 
 export interface CreateProfileInput {

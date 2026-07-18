@@ -17,4 +17,5 @@ pub mod disruption;
 pub mod event_log;
 pub mod integrations;
 pub mod profile;
+pub mod routine;
 pub mod semester;

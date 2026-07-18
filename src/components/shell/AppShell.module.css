@@ -17,6 +17,7 @@
   min-width: 0;
   overflow-y: auto;
   padding: var(--space-8) var(--space-7);
+  background: var(--bg-content-gradient), var(--bg-canvas);
   animation: crossfade var(--duration-standard, 220ms) var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
 }
 

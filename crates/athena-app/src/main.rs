@@ -61,11 +61,18 @@ fn main() {
     let builder = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::get_app_version,
+            commands::is_using_keychain_fallback,
             commands::bootstrap::get_bootstrap_state,
             commands::onboarding::create_profile,
             commands::onboarding::commit_semester_setup,
             commands::planner::log_disruption,
             commands::planner::list_recent_disruptions,
+            commands::routine::submit_daily_routine_response,
+            commands::routine::has_daily_routine_response,
+            commands::routine::list_recent_daily_routine_responses,
+            commands::routine::submit_weekly_routine_response,
+            commands::routine::has_weekly_routine_response,
+            commands::routine::list_recent_weekly_routine_responses,
             commands::integrations::list_data_sources,
             commands::integrations::sync_codeforces,
             commands::integrations::get_latest_codeforces_snapshot,

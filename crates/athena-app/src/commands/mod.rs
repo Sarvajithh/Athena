@@ -10,7 +10,25 @@ pub mod bootstrap;
 pub mod integrations;
 pub mod onboarding;
 pub mod planner;
+pub mod routine;
 use serde::Serialize;
+
+/// Whether credential storage is currently falling back to the local
+/// encrypted file store because the OS keychain backend is unavailable
+/// (Task 4, keychain.rs's `fallback` submodule). A minimal, standalone
+/// command living here rather than in a new file — `get_app_version`
+/// above is this crate's existing precedent for a free command with no
+/// dedicated module of its own, and Task 4's scope note restricts that
+/// task to `keychain.rs` and `Cargo.toml`; this one extra line here (and
+/// its registration in `main.rs`'s `generate_handler!`) is the minimal
+/// exception needed so the frontend can actually surface Task 4's
+/// required "stored locally, not in your OS keychain" notice — that
+/// requirement is otherwise unreachable from a Settings screen that
+/// only ever talks to the backend over IPC.
+#[tauri::command]
+pub fn is_using_keychain_fallback() -> bool {
+    crate::keychain::is_using_fallback_storage()
+}
 
 /// The shape returned to the frontend. Kept as an explicit typed struct
 /// (never a bare string) so the TypeScript binding in

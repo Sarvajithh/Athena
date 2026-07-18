@@ -1,13 +1,17 @@
+import { useEffect, useState } from 'react';
 import { DensityToggle } from '../../components/shared/DensityToggle';
 import {
   deleteAnthropicApiKey,
   deleteHfApiKey,
   hasAnthropicApiKey,
   hasHfApiKey,
+  isUsingKeychainFallback,
   saveAnthropicApiKey,
   saveHfApiKey,
 } from '../../ipc/bindings';
 import { ApiKeyPanel } from './ApiKeyPanel';
+import { ConnectorsSection } from './ConnectorsSection';
+import { RoutineTriggerSection } from './RoutineTriggerSection';
 import styles from './Settings.module.css';
 
 /**
@@ -33,14 +37,37 @@ import styles from './Settings.module.css';
  * third provider `RecommendationDto.source` can report, requires no key
  * (it's a local install) and so has no panel here — nothing in
  * `ipc/bindings.ts` exposes an Ollama configuration command to call.
+ *
+ * This screen also hosts every account/OAuth data-source connector
+ * (Codeforces, LeetCode, GitHub, Gmail, Google Classroom, Notion — see
+ * `ConnectorsSection.tsx`), relocated here from Semester Setup's
+ * wizard. An account connection is a standing relationship that should
+ * persist across every future semester, not something re-prompted
+ * inside a once-a-term wizard, so it lives in Settings instead. Only
+ * Semester Setup's file-based import mechanisms (calendar/.ics, PDF,
+ * CSV — see `SemesterSetup/ImportStep.tsx`) remain in the wizard.
  */
 export default function Settings() {
+  const [fallbackActive, setFallbackActive] = useState(false);
+
+  useEffect(() => {
+    isUsingKeychainFallback().then(setFallbackActive).catch(() => undefined);
+  }, []);
+
   return (
     <div className={styles.screen}>
       <div className={styles.header}>
         <p className={`${styles.eyebrow} type-caption`}>Settings</p>
         <DensityToggle />
       </div>
+
+      {fallbackActive && (
+        <p className={`${styles.sectionDescription} type-caption`}>
+          Your device's secure keychain isn't available right now, so any keys or tokens you save below are being
+          stored in an encrypted file in Athena's own app-data folder instead. They still never touch the database,
+          and everything works the same either way.
+        </p>
+      )}
 
       <section className={styles.section}>
         <h2 className={`${styles.sectionTitle} type-body-medium`}>AI providers</h2>
@@ -70,6 +97,10 @@ export default function Settings() {
           deleteKey={deleteHfApiKey}
         />
       </section>
+
+      <ConnectorsSection styles={styles} />
+
+      <RoutineTriggerSection styles={styles} />
     </div>
   );
 }

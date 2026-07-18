@@ -56,6 +56,24 @@ athena-ingestion = { path = "../athena-ingestion" }
 # one crate allowed device-integration dependencies like `tauri` itself.
 keyring = "2"
 
+# Task 4 (Windows-build prep): local encrypted-file fallback for when
+# the OS keychain backend itself is unavailable (e.g. WSL/minimal Linux
+# with no D-Bus Secret Service) — see keychain.rs's module doc comment
+# for the full rationale. `keyring` 2.x's default feature has no
+# built-in file-based fallback option, so this is the one new
+# dependency this task adds: `aes-gcm`, a well-known, NCC-Group-audited
+# RustCrypto AEAD implementation, used only inside keychain.rs's
+# `fallback` submodule. `rand` and `base64` are already present
+# transitively in this workspace's `Cargo.lock` (via other
+# dependencies) at compatible versions; `dirs` resolves the same
+# OS-standard per-user data directory Tauri itself uses, without
+# needing an `AppHandle` threaded into this module (keychain.rs takes
+# none today, and Task 4 doesn't touch any other Rust file).
+aes-gcm = "0.10"
+rand = "0.8"
+base64 = "0.22"
+dirs = "5"
+
 # Tokio is already pulled in transitively by `tauri`'s async runtime;
 # named explicitly here only so `commands::integrations`'s scheduler can
 # spawn a background interval task with an unambiguous, pinned API

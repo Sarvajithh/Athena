@@ -11,7 +11,7 @@ import { EmptyState } from '../../components/shared/EmptyState';
 import { commitSemesterSetup, type CourseInput, type DeadlineInput } from '../../ipc/bindings';
 import type { SemesterPhase, WizardStep } from '../../mock/types';
 import { useBootstrap } from '../../state/bootstrapContext';
-import { ConnectorsStep, type StagedDeadline } from './ConnectorsStep';
+import { ImportStep, type StagedDeadline } from './ImportStep';
 import { CourseEntryStep } from './CourseEntryStep';
 import { DeadlineEntryStep } from './DeadlineEntryStep';
 import { PhaseStrip } from './PhaseStrip';
@@ -81,7 +81,7 @@ interface SemesterSetupProps {
   onComplete?: () => void | Promise<void>;
 }
 
-const STEP_LABELS = ['Basics', 'Courses', 'Deadlines', 'Deep-work window', 'Connectors', 'Review & start'];
+const STEP_LABELS = ['Basics', 'Courses', 'Deadlines', 'Deep-work window', 'Import', 'Review & start'];
 
 function wizardStepsFor(current: number): WizardStep[] {
   return STEP_LABELS.map((label, index) => ({
@@ -322,7 +322,7 @@ export default function SemesterSetup({ mode = 'standalone', onComplete }: Semes
           </div>
         )}
 
-        {step === 4 && <ConnectorsStep styles={styles} onStageDeadlines={handleStageDeadlines} />}
+        {step === 4 && <ImportStep styles={styles} onStageDeadlines={handleStageDeadlines} />}
 
         {step === 5 && (
           <div className={styles.form}>
