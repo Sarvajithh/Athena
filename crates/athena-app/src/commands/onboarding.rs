@@ -183,3 +183,95 @@ pub fn commit_semester_setup(
 
     Ok(semester_id)
 }
+
+/// A single course, added to the *current* semester outside of the
+/// full Semester Setup commit — the Semester screen's "Add course"
+/// action (semester workflow reform brief, Part 1, item 2). Reuses
+/// `course::insert_courses` (unchanged) inside its own one-row
+/// transaction; no new insert logic, just a narrower entry point than
+/// `commit_semester_setup`'s "one or more courses at semester-start"
+/// shape.
+#[tauri::command]
+pub fn add_course_to_semester(db: State<'_, Mutex<Connection>>, input: CourseInput) -> Result<i64, String> {
+    let mut conn = db.lock().map_err(|e| e.to_string())?;
+
+    let current_semester = semester::get_current_semester(&conn)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No active semester — start a semester before adding a course.".to_string())?;
+
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    let new_course = NewCourse {
+        code: input.code,
+        title: input.title,
+        credits: input.credits,
+        leverage_class: input.leverage_class,
+        instructor: input.instructor,
+        target_grade: input.target_grade,
+        meeting_pattern: input
+            .meeting_pattern
+            .into_iter()
+            .map(|m| MeetingSlot {
+                day: m.day,
+                start: m.start,
+                end: m.end,
+            })
+            .collect(),
+    };
+
+    let ids = course::insert_courses(&tx, current_semester.id, &[new_course]).map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(ids[0])
+}
+
+/// One normalized deadline candidate, produced client-side from a
+/// connector's already-synced snapshot rows (`list_gmail_messages`,
+/// `list_classroom_coursework`, `list_classroom_announcements`,
+/// `list_notion_pages` — Semester screen's "Pull deadlines" action).
+/// This command does no connector/sync work of its own; it is the same
+/// "land in `deadlines`" step `commit_semester_setup` already does for
+/// hand-typed rows, reused for connector-sourced ones instead.
+#[derive(Debug, Deserialize)]
+pub struct DeadlineCandidateInput {
+    pub course_id: Option<i64>,
+    pub title: String,
+    pub category: String,
+    pub due_at: String,
+    pub leverage_class: String,
+    pub notes: Option<String>,
+}
+
+/// Inserts one or more pulled/normalized deadlines against the
+/// *current* semester in a single transaction. Returns the new
+/// `deadlines.id` values in the same order as `candidates`.
+#[tauri::command]
+pub fn add_deadlines_to_semester(
+    db: State<'_, Mutex<Connection>>,
+    candidates: Vec<DeadlineCandidateInput>,
+) -> Result<Vec<i64>, String> {
+    let mut conn = db.lock().map_err(|e| e.to_string())?;
+
+    let current_semester = semester::get_current_semester(&conn)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No active semester — start a semester before adding deadlines.".to_string())?;
+
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    let new_deadlines: Vec<NewDeadline> = candidates
+        .into_iter()
+        .map(|c| NewDeadline {
+            course_id: c.course_id,
+            title: c.title,
+            category: c.category,
+            due_at: c.due_at,
+            leverage_class: c.leverage_class,
+            notes: c.notes,
+        })
+        .collect();
+
+    let ids = deadline::insert_deadlines(&tx, current_semester.id, &new_deadlines).map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(ids)
+}

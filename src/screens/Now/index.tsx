@@ -125,7 +125,7 @@ export default function Now() {
       ) : null}
 
       <QuickLaunch
-        onOpenSemesterSetup={() => navigate('semester-setup')}
+        onOpenSemester={() => navigate('semester')}
         onOpenDecisionLog={() => navigate('decision-log')}
       />
     </div>

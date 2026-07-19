@@ -1,15 +1,15 @@
 import { lazy } from 'react';
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Compass, ListChecks, Settings as SettingsIcon, SlidersHorizontal, TrendingUp } from 'lucide-react';
+import { Calendar, Compass, ListChecks, Settings as SettingsIcon, TrendingUp } from 'lucide-react';
 
 const Now = lazy(() => import('./screens/Now'));
 const Trajectory = lazy(() => import('./screens/Trajectory'));
-const SemesterSetup = lazy(() => import('./screens/SemesterSetup'));
+const Semester = lazy(() => import('./screens/Semester'));
 const DecisionLog = lazy(() => import('./screens/DecisionLog'));
 const Settings = lazy(() => import('./screens/Settings'));
 
-export type ScreenId = 'now' | 'trajectory' | 'semester-setup' | 'decision-log' | 'settings';
+export type ScreenId = 'now' | 'trajectory' | 'semester' | 'decision-log' | 'settings';
 
 export interface RouteConfig {
   id: ScreenId;
@@ -30,13 +30,7 @@ export interface RouteConfig {
 export const routes: RouteConfig[] = [
   { id: 'now', label: 'Now', icon: Compass, shortcut: '1', component: Now },
   { id: 'trajectory', label: 'Trajectory', icon: TrendingUp, shortcut: '2', component: Trajectory },
-  {
-    id: 'semester-setup',
-    label: 'Semester Setup',
-    icon: SlidersHorizontal,
-    shortcut: '3',
-    component: SemesterSetup,
-  },
+  { id: 'semester', label: 'Semester', icon: Calendar, shortcut: '3', component: Semester },
   { id: 'decision-log', label: 'Decision Log', icon: ListChecks, shortcut: '4', component: DecisionLog },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, shortcut: '5', component: Settings },
 ];

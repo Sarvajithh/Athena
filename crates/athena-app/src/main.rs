@@ -70,6 +70,8 @@ fn main() {
             commands::bootstrap::get_bootstrap_state,
             commands::onboarding::create_profile,
             commands::onboarding::commit_semester_setup,
+            commands::onboarding::add_course_to_semester,
+            commands::onboarding::add_deadlines_to_semester,
             commands::planner::log_disruption,
             commands::planner::list_recent_disruptions,
             commands::routine::submit_daily_routine_response,

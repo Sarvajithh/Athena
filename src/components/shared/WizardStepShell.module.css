@@ -1,0 +1,33 @@
+.steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--text-tertiary);
+}
+
+.step[data-status='current'] {
+  color: var(--accent);
+  background: var(--bg-surface);
+}
+
+.step[data-status='complete'] {
+  color: var(--text-secondary);
+}
+
+.connector {
+  width: 24px;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.body {
+  margin-top: var(--space-5);
+}

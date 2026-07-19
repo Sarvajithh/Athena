@@ -357,6 +357,25 @@ export async function commitSemesterSetup(input: CommitSemesterSetupInput): Prom
   return invoke<number>("commit_semester_setup", { input });
 }
 
+/** Adds a single course to the *current* semester. Returns the new `courses.id`. */
+export async function addCourseToSemester(input: CourseInput): Promise<number> {
+  return invoke<number>("add_course_to_semester", { input });
+}
+
+export interface DeadlineCandidateInput {
+  course_id: number | null;
+  title: string;
+  category: DeadlineCategory;
+  due_at: string;
+  leverage_class: LeverageClass;
+  notes: string | null;
+}
+
+/** Inserts one or more pulled/normalized deadlines against the current semester. Returns their new `deadlines.id` values. */
+export async function addDeadlinesToSemester(candidates: DeadlineCandidateInput[]): Promise<number[]> {
+  return invoke<number[]>("add_deadlines_to_semester", { candidates });
+}
+
 // ---------------------------------------------------------------------
 // Integrations — mirrors crates/athena-app/src/commands/integrations.rs
 // (07_INTEGRATIONS.md). Every interface below is a 1:1 mirror of a Rust

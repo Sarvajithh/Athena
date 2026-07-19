@@ -5,7 +5,7 @@ import { Card } from '../../components/shared/Card';
 import { Icon } from '../../components/shared/Icon';
 import { createProfile } from '../../ipc/bindings';
 import type { WizardStep } from '../../mock/types';
-import { WizardStepShell } from '../SemesterSetup/WizardStepShell';
+import { WizardStepShell } from '../../components/shared/WizardStepShell';
 import styles from './ProfileWizard.module.css';
 
 interface ProfileWizardProps {

@@ -1,7 +1,7 @@
 import styles from './QuickLaunch.module.css';
 
 interface QuickLaunchProps {
-  onOpenSemesterSetup: () => void;
+  onOpenSemester: () => void;
   onOpenDecisionLog: () => void;
 }
 
@@ -23,11 +23,11 @@ interface QuickLaunchProps {
  * implemented here — which is also exactly how §9 itself describes
  * those two: "plain navigation, no data created."
  */
-export function QuickLaunch({ onOpenSemesterSetup, onOpenDecisionLog }: QuickLaunchProps) {
+export function QuickLaunch({ onOpenSemester, onOpenDecisionLog }: QuickLaunchProps) {
   return (
     <nav className={styles.launch} aria-label="Quick launch">
-      <button type="button" className={`${styles.link} type-caption`} onClick={onOpenSemesterSetup}>
-        Open Semester Setup
+      <button type="button" className={`${styles.link} type-caption`} onClick={onOpenSemester}>
+        Open Semester
       </button>
       <span className={styles.dot} aria-hidden="true">
         ·
