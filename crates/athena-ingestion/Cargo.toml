@@ -1,0 +1,38 @@
+[package]
+name = "athena-ingestion"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# 07_INTEGRATIONS.md's Version 1 connectors land in this crate
+# (SPRINT1_SPEC.md §3's "no third-party dependencies yet" was scoped to
+# S01; connectors are exactly the later-sprint deliverable it deferred
+# to). Every dependency below is used by exactly one connector module —
+# none is speculative (Implementation Plan §4, "cut, don't add").
+#
+# Internal dep below establishes the Master Spec §4.5 dependency graph
+# (SPRINT1_SPEC.md Objective 1); now actually used by every poll-based
+# connector's repository read/write of connector-agnostic rows it does
+# NOT own (this crate never writes SQL itself — see PROJECT_RULES.md
+# "athena-data is the only crate allowed to write SQL"; connectors
+# return typed structs, athena-app's commands persist them).
+[dependencies]
+athena-data = { path = "../athena-data" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# §1.1/§1.2/§1.3 (Codeforces, LeetCode, GitHub) — the only three
+# polling, network-calling connectors in this document. rustls instead
+# of the platform TLS stack (native-tls) so the crate has no system
+# OpenSSL dependency to configure per-platform for a three-OS desktop
+# build (macOS/Windows/Linux, Master Spec §1).
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rand = "0.8"
+sha2 = "0.10"
+# §1.5 (Resume/Transcript/PDF Import) — local-only text extraction, no
+# network call at all, matching §1.5's "zero outbound dependency"
+# requirement. Pure Rust, no system PDF library dependency.
+pdf-extract = "0.7"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

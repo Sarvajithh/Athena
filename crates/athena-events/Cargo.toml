@@ -1,0 +1,19 @@
+[package]
+name = "athena-events"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# SPRINT1_SPEC.md §3: athena-events takes zero third-party dependencies
+# in S01 — the command/event bus and interceptor registry (which will
+# need tokio::sync::broadcast, Implementation Plan §1) are explicitly
+# out of scope for this sprint (SPRINT1_SPEC.md §1, "Explicitly out of
+# scope: the event bus's interceptor chain logic").
+#
+# Internal deps below are wired up now, unused, so the workspace
+# dependency graph from Master Spec §4.5 is mechanically enforced by
+# Cargo from S01 onward (SPRINT1_SPEC.md Objective 1) rather than left
+# for a later sprint to wire up by convention.
+[dependencies]
+athena-domain = { path = "../athena-domain" }
+athena-data = { path = "../athena-data" }

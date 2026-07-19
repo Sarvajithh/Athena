@@ -1,0 +1,36 @@
+[package]
+name = "athena-data"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# rusqlite (bundled SQLite, WAL support) and refinery (additive-only,
+# idempotent migration runner) are the only two third-party dependencies
+# this crate needs for S01 — Implementation Plan §1, §9; SPRINT1_SPEC.md
+# §3. No ORM: athena-data writes SQL directly (Implementation Plan §9).
+#
+# No internal (athena-domain) dependency yet: Master Spec §4.5's
+# dependency diagram does not require athena-data to depend on
+# athena-domain, and S01's placeholder repository module (Objective 2 /
+# "repositories/mod.rs — empty module, placeholder only") does not yet
+# need a domain type. Adding it now would be unjustified speculative
+# coupling (Implementation Plan §4, "no dependency added solely... when
+# in doubt, cut, don't add").
+[dependencies]
+rusqlite = { version = "0.31", features = ["bundled"] }
+refinery = { version = "0.8", features = ["rusqlite"] }
+
+# Added for the onboarding-schema repositories (V2 migration): typed rows
+# (`user_profile`, `courses`, `deadlines`, ...) are serde-serializable so
+# athena-app can hand them to Tauri's IPC layer unmodified in shape
+# (01_ARCHITECTURE.md §2.1 — "no transformation of domain meaning happens
+# above athena-data"), and `meeting_pattern` / `snapshot` /
+# `changed_fields` / `payload` are stored as JSON text columns.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Dev-only: needed for the temp-file SQLite integration test (SPRINT1_SPEC.md
+# §7, "open a temp-file SQLite DB, run migrations..."). Never shipped in the
+# built app.
+[dev-dependencies]
+tempfile = "3"

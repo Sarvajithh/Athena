@@ -1,0 +1,33 @@
+[package]
+name = "athena-reasoning"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# S01's "no third-party dependencies yet" scope (SPRINT1_SPEC.md §3) was
+# explicitly bounded to that sprint's Foundation Scaffold. 06_AI_ENGINE.md
+# §9 is the deliverable that ends the deferral: a real `LlmProvider`
+# trait boundary needs (a) a typed JSON prompt/response shape shared with
+# every call site, and (b) exactly two outbound HTTP clients — Anthropic
+# Claude (cloud, primary) and Ollama (local, first-class fallback, not an
+# afterthought). Every dependency below is used by exactly one of those,
+# same "cut, don't add" discipline `athena-ingestion`'s own Cargo.toml
+# documents for its connectors.
+[dependencies]
+athena-domain = { path = "../athena-domain" }
+athena-data = { path = "../athena-data" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Blocking client, not async: `athena-reasoning` takes no `tokio`
+# dependency of its own (Stage 4 calls are infrequent, one-shot request/
+# response, never a stream the caller needs to hold open), so the one
+# provider that talks to a remote model uses `reqwest::blocking` rather
+# than pulling in an async runtime this crate otherwise has no use for.
+# `athena-app`'s Tauri commands (already `tokio`-backed) wrap a call to
+# `Synthesizer::synthesize` in `tauri::async_runtime::spawn_blocking`
+# the same way any other blocking call on that boundary is handled.
+# rustls instead of the platform TLS stack, matching
+# `athena-ingestion`'s own reasoning for its three network connectors.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"] }

@@ -1,0 +1,101 @@
+[package]
+name = "athena-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# Tauri build script requirement (generates window/IPC glue).
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# athena-app is the only crate allowed `tauri` and the only crate allowed
+# `anyhow` internally (Implementation Plan §6, SPRINT1_SPEC.md §3). Exact
+# minor version pinned per Implementation Plan §1 ("Pin exact minor
+# version in Cargo.lock/package-lock.json; upgrade deliberately, once per
+# quarter at most").
+tauri = { version = "2.1", features = [] }
+anyhow = "1"
+
+# Structured logging (Implementation Plan §7): tracing + a rotating,
+# local JSON-lines file appender. No telemetry SDK, no remote shipping.
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+tracing-appender = "0.2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Internal dependency graph (Master Spec §4.5), mechanically enforced by
+# Cargo rather than convention (SPRINT1_SPEC.md Objective 1):
+#   athena-app -> athena-events -> athena-domain, athena-data
+#   athena-app -> athena-reasoning -> athena-domain, athena-data
+#   athena-app -> athena-ingestion -> athena-data
+# athena-app also depends on athena-data directly: main.rs's boot
+# sequence (Objective 5) opens the DB connection and runs migrations
+# itself, before any command/event/reasoning/ingestion code runs.
+#
+# A direct athena-app -> athena-domain edge was added alongside the
+# onboarding feature: `commands::bootstrap::get_bootstrap_state` calls
+# `athena_domain::priority::resolve_priority` directly on deadlines it
+# just fetched from athena-data, rather than routing through
+# athena-events/athena-reasoning (neither of which has an onboarding-era
+# reason to exist yet).
+athena-data = { path = "../athena-data" }
+athena-domain = { path = "../athena-domain" }
+athena-events = { path = "../athena-events" }
+athena-reasoning = { path = "../athena-reasoning" }
+athena-ingestion = { path = "../athena-ingestion" }
+
+# 07_INTEGRATIONS.md §4: GitHub's personal access token is "stored
+# exclusively in the OS-native keychain... never in SQLite, never in a
+# plaintext config file, never logged." `keyring` is the standard
+# cross-platform crate for exactly this (Keychain on macOS, Credential
+# Manager on Windows, Secret Service on Linux) — the same three
+# backends §4 names — called only from athena-app's command layer, the
+# one crate allowed device-integration dependencies like `tauri` itself.
+keyring = "2"
+
+# Task 4 (Windows-build prep): local encrypted-file fallback for when
+# the OS keychain backend itself is unavailable (e.g. WSL/minimal Linux
+# with no D-Bus Secret Service) — see keychain.rs's module doc comment
+# for the full rationale. `keyring` 2.x's default feature has no
+# built-in file-based fallback option, so this is the one new
+# dependency this task adds: `aes-gcm`, a well-known, NCC-Group-audited
+# RustCrypto AEAD implementation, used only inside keychain.rs's
+# `fallback` submodule. `rand` and `base64` are already present
+# transitively in this workspace's `Cargo.lock` (via other
+# dependencies) at compatible versions; `dirs` resolves the same
+# OS-standard per-user data directory Tauri itself uses, without
+# needing an `AppHandle` threaded into this module (keychain.rs takes
+# none today, and Task 4 doesn't touch any other Rust file).
+aes-gcm = "0.10"
+rand = "0.8"
+base64 = "0.22"
+dirs = "5"
+
+# Tokio is already pulled in transitively by `tauri`'s async runtime;
+# named explicitly here only so `commands::integrations`'s scheduler can
+# spawn a background interval task with an unambiguous, pinned API
+# (Implementation Plan §1, "pin exact minor version... upgrade
+# deliberately"). `net`/`io-util` added for the OAuth amendment
+# (07_INTEGRATIONS.md §1.8-§1.10): `oauth_loopback.rs`'s localhost
+# redirect listener needs `TcpListener` plus `AsyncRead`/`AsyncWrite`.
+tokio = { version = "1", features = ["rt-multi-thread", "time", "macros", "net", "io-util"] }
+
+# Daily-questionnaire scheduled trigger (Task: "Add a scheduled,
+# time-based daily questionnaire prompt"). `chrono` is already present
+# transitively (see Cargo.lock) at 0.4.45; pinned directly here since
+# `routine_scheduler.rs` now names it explicitly for local-time
+# sleep-until-target-time math (`Local`, `NaiveTime`). `tauri-plugin-
+# notification` is the one new first-party Tauri plugin this task adds
+# — the system notification shown when the questionnaire comes due.
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+tauri-plugin-notification = "2"
+
+# Needed to name the `rusqlite::Connection` type held in Tauri-managed
+# state (`app.manage(Mutex::new(conn))` in main.rs) so the onboarding
+# commands can declare `State<'_, Mutex<Connection>>`. Same pinned
+# version as athena-data (the only crate that opens/migrates it).
+rusqlite = { version = "0.31", features = ["bundled"] }
+dotenvy = "0.15.7"

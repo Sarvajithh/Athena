@@ -1,0 +1,14 @@
+[package]
+name = "athena-domain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# PROJECT_RULES.md Immutable Rule #4: athena-domain has zero dependencies
+# on Tauri, SQLite, the network, or the LLM — and, per Implementation
+# Plan §4, takes zero third-party dependencies at all beyond the standard
+# library at this stage. No dependency is added in S01 because no domain
+# type yet needs one (e.g. no UUID newtype is introduced until a sprint
+# that actually needs an ID type — Implementation Plan §2, "no
+# speculative generality").
+[dependencies]

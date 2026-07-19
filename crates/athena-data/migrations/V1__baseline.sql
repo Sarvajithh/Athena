@@ -1,0 +1,17 @@
+-- V1__baseline.sql
+--
+-- Baseline migration for Sprint S01 (Foundation Scaffold).
+--
+-- Deliberately empty of domain tables. Per PROJECT_RULES.md Immutable
+-- Rule #7 ("no feature ships with an implicit new table") and Immutable
+-- Rule #3 ("no duplicate functionality"), S01 introduces zero domain
+-- schema. The only table this sprint's migration machinery needs is the
+-- migration-bookkeeping table (`refinery_schema_history`), which
+-- `refinery` creates and manages itself — it is infrastructure, not
+-- product data, and is not created here.
+--
+-- This migration exists only to prove the runner applies a first
+-- migration idempotently (SPRINT1_SPEC.md Objective 4, Acceptance
+-- Criteria #7-#8). The first real domain table is added by whichever
+-- later sprint's spec calls for it, as its own reviewed deliverable.
+SELECT 1;
